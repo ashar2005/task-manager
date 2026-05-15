@@ -26,7 +26,7 @@ export const Route = createFileRoute("/")({
 
 type Status = "pending" | "in-progress" | "completed";
 type Task = {
-  _id: string; // MongoDB format identifier
+  _id: string;
   title: string;
   description: string;
   status: Status;
@@ -61,14 +61,14 @@ function TaskManager() {
     toastTimer.current = setTimeout(() => setToast(null), 2400);
   };
 
-  // 1. Fetch data on initialization
   const fetchTasks = async () => {
     try {
       setLoading(true);
       const response = await fetch(API_URL);
       if (!response.ok) throw new Error("Could not retrieve tasks.");
       const data = await response.json();
-      setTasks(Array.isArray(data) ? data : data.tasks || []);
+      // Backend returns { success: true, data: [...] }
+      setTasks(Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : []);
     } catch (error) {
       console.error("Backend connection missing:", error);
       showToast("Cannot read data from MongoDB", "err");
@@ -99,13 +99,11 @@ function TaskManager() {
 
   const openEdit = (t: Task) => {
     setEditTask(t);
-    // Formatting date string correctly for HTML input elements (YYYY-MM-DD)
     const formattedDate = t.dueDate ? new Date(t.dueDate).toISOString().split("T")[0] : "";
     setForm({ title: t.title, description: t.description, status: t.status, dueDate: formattedDate });
     setShowModal(true);
   };
 
-  // 2. Submit form variations (Create / Update)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return;
@@ -118,7 +116,9 @@ function TaskManager() {
           body: JSON.stringify(form),
         });
         if (!response.ok) throw new Error();
-        const updatedTask = await response.json();
+        const result = await response.json();
+        // Backend returns { success: true, data: task }
+        const updatedTask = result.data || result;
         setTasks((prev) => prev.map((t) => (t._id === editTask._id ? updatedTask : t)));
         showToast("Task updated successfully");
       } else {
@@ -128,17 +128,18 @@ function TaskManager() {
           body: JSON.stringify(form),
         });
         if (!response.ok) throw new Error();
-        const newTask = await response.json();
+        const result = await response.json();
+        // Backend returns { success: true, data: task }
+        const newTask = result.data || result;
         setTasks((prev) => [newTask, ...prev]);
-        showToast("Task created smoothly");
+        showToast("Task created successfully");
       }
       setShowModal(false);
     } catch (error) {
-      showToast("Could not save mutations to database", "err");
+      showToast("Could not save task", "err");
     }
   };
 
-  // 3. Status quick-toggle interaction
   const toggleStatus = async (task: Task) => {
     const nextStatus: Status = task.status === "completed" ? "pending" : "completed";
     try {
@@ -148,22 +149,22 @@ function TaskManager() {
         body: JSON.stringify({ ...task, status: nextStatus }),
       });
       if (!response.ok) throw new Error();
-      const updated = await response.json();
+      const result = await response.json();
+      const updated = result.data || result;
       setTasks((prev) => prev.map((t) => (t._id === task._id ? updated : t)));
     } catch (error) {
-      showToast("Failed state mutation synchronization", "err");
+      showToast("Failed to update status", "err");
     }
   };
 
-  // 4. Remove target entity structure
   const handleDelete = async (id: string) => {
     try {
       const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error();
       setTasks((prev) => prev.filter((t) => t._id !== id));
-      showToast("Task safely deleted", "err");
+      showToast("Task deleted");
     } catch (error) {
-      showToast("Failed removal process sync", "err");
+      showToast("Failed to delete task", "err");
     }
   };
 
@@ -200,16 +201,12 @@ function TaskManager() {
       <div
         aria-hidden
         className="pointer-events-none fixed -top-40 -right-40 h-[480px] w-[480px] rounded-full opacity-50 blur-3xl"
-        style={{
-          background: "radial-gradient(closest-side, oklch(0.85 0.13 65), transparent 70%)",
-        }}
+        style={{ background: "radial-gradient(closest-side, oklch(0.85 0.13 65), transparent 70%)" }}
       />
       <div
         aria-hidden
         className="pointer-events-none fixed -bottom-52 -left-32 h-[420px] w-[420px] rounded-full opacity-40 blur-3xl"
-        style={{
-          background: "radial-gradient(closest-side, oklch(0.82 0.12 200), transparent 70%)",
-        }}
+        style={{ background: "radial-gradient(closest-side, oklch(0.82 0.12 200), transparent 70%)" }}
       />
 
       <div className="relative mx-auto max-w-5xl px-6 py-10 md:px-10 md:py-16">
@@ -302,7 +299,7 @@ function TaskManager() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-[oklch(0.55_0.04_60)]">
             <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="mt-2 text-sm">Synchronizing ledger components…</p>
+            <p className="mt-2 text-sm">Loading tasks…</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-[oklch(0.85_0.02_85)] bg-white/50 px-6 py-20 text-center">
@@ -323,10 +320,7 @@ function TaskManager() {
                   className="group relative overflow-hidden rounded-2xl border border-[oklch(0.92_0.015_85)] bg-white/85 p-5 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-[oklch(0.85_0.04_60)] hover:shadow-[0_18px_40px_-22px_oklch(0.22_0.04_60/0.35)]"
                   style={{ animation: `slideUp 0.4s ease ${i * 40}ms backwards` }}
                 >
-                  <span
-                    aria-hidden
-                    className={`absolute inset-y-0 left-0 w-1 ${cfg.dot} opacity-80`}
-                  />
+                  <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${cfg.dot} opacity-80`} />
                   <div className="flex items-start gap-4 pl-2">
                     <button
                       onClick={() => toggleStatus(task)}
@@ -342,24 +336,16 @@ function TaskManager() {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3
-                          className={`font-[DM_Serif_Display,serif] text-xl leading-snug ${
-                            done ? "text-[oklch(0.55_0.03_60)] line-through" : ""
-                          }`}
-                        >
+                        <h3 className={`font-[DM_Serif_Display,serif] text-xl leading-snug ${done ? "text-[oklch(0.55_0.03_60)] line-through" : ""}`}>
                           {task.title}
                         </h3>
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${cfg.chip}`}
-                        >
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${cfg.chip}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
                           {cfg.label}
                         </span>
                       </div>
                       {task.description && (
-                        <p className="mt-1 text-sm text-[oklch(0.45_0.03_60)]">
-                          {task.description}
-                        </p>
+                        <p className="mt-1 text-sm text-[oklch(0.45_0.03_60)]">{task.description}</p>
                       )}
                       {task.dueDate && (
                         <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-[oklch(0.5_0.04_60)]">
@@ -499,20 +485,9 @@ function TaskManager() {
       )}
 
       {toast && (
-        <div
-          className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2"
-          style={{ animation: "slideUp 0.25s ease" }}
-        >
-          <div
-            className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm text-white shadow-2xl ${
-              toast.tone === "ok" ? "bg-[oklch(0.35_0.1_155)]" : "bg-[oklch(0.42_0.16_25)]"
-            }`}
-          >
-            {toast.tone === "ok" ? (
-              <CheckCircle2 className="h-4 w-4" />
-            ) : (
-              <Loader2 className="h-4 w-4" />
-            )}
+        <div className="fixed bottom-6 left-1/2 z-[60] -translate-x-1/2" style={{ animation: "slideUp 0.25s ease" }}>
+          <div className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm text-white shadow-2xl ${toast.tone === "ok" ? "bg-[oklch(0.35_0.1_155)]" : "bg-[oklch(0.42_0.16_25)]"}`}>
+            {toast.tone === "ok" ? <CheckCircle2 className="h-4 w-4" /> : <Loader2 className="h-4 w-4" />}
             {toast.msg}
           </div>
         </div>
