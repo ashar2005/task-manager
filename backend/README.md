@@ -1,86 +1,55 @@
-\# Task Management System
+# Task Manager App
 
+A full-stack Task Manager built with React, Node.js, Express, and MongoDB.
 
+## 🚀 Getting Started
 
-A full-stack task management application built with React.js and Node.js.
+### Prerequisites
+- Node.js installed
+- MongoDB Atlas account
 
+### Installation
 
-
-\## Tech Stack
-
-\- \*\*Frontend:\*\* React.js, Tailwind CSS, Axios
-
-\- \*\*Backend:\*\* Node.js, Express.js
-
-\- \*\*Database:\*\* MongoDB Atlas
-
-\- \*\*Auth:\*\* JWT (JSON Web Tokens)
-
-
-
-\## Features
-
-\- Create, Read, Update, Delete tasks
-
-\- Search tasks by title or description
-
-\- Filter by status (Pending, In Progress, Completed)
-
-\- Progress bar showing % of completed tasks
-
-\- JWT Authentication (Register/Login)
-
-\- Responsive UI
-
-
-
-\## How to Run Locally
-
-
-
-\### Backend
-
+#### 1. Clone the repo
 ```bash
+git clone https://github.com/ashar2005/task-manager.git
+cd task-manager
+```
 
-cd backend
-
+#### 2. Setup Backend
+```bash
 npm install
+```
 
+Create a `.env` file in root folder:
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+Run backend:
+```bash
 npm run dev
-
 ```
 
-
-
-\### Frontend
-
+#### 3. Setup Frontend
 ```bash
-
 cd client
-
 npm install
-
 npm start
-
 ```
 
+### 🌐 Open in Browser
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:5000`
 
-
-
-
-\## API Endpoints
-
-| Method | Endpoint | Description |
-
-|--------|----------|-------------|
-
-| POST | /api/tasks | Create task |
-
-| GET | /api/tasks | Get all tasks |
-
-| GET | /api/tasks/:id | Get single task |
-
-| PUT | /api/tasks/:id | Update task |
-
-| DELETE | /api/tasks/:id | Delete task |
-
+## 📁 Project Structure
+task-manager/
+├── controllers/
+├── models/
+├── routes/
+├── middleware/
+├── server.js
+└── client/         ← React frontend
+## 🛠️ Built With
+- React.js
+- Node.js + Express
+- MongoDB Atlas
+- Tailwind CSS
